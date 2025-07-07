@@ -1,0 +1,4 @@
+# HDTUI
+A TUI Wrapper for HDTools at Clemson University.
+
+NOT AFFILIATED WITH CLEMSON UNIVERSITY.
