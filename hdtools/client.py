@@ -27,22 +27,63 @@ def get_headers():
     logging.debug(f"Request headers: {headers}")
     return headers
 
-def search_user(username):
-    url = f"{BASE_URL}/srv/feed/dynamic/rest/Search/{username}"
+def get_modules():
+    url = f"{BASE_URL}/srv/util/getModules.php"
+    logging.debug(f"GET {url}")
+    r = requests.get(url, headers=get_headers())
+    logging.debug(f"Modules: {r.json()}")
+    r.raise_for_status()
+    return r.json()
+
+def check_module_auth(module, vaultzid):
+    url = f"{BASE_URL}/srv/feed/dynamic/checkAuth/{module}/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    logging.debug(f"GET {url}")
+    try:
+        r = requests.get(url, headers=get_headers())
+        if r.status_code == 404:
+            logging.debug(f"Module '{module}' not found (404). Skipping.")
+            return None
+        r.raise_for_status()
+        return r.json() # Acts as bool, response is plaintext 'true'
+    except requests.RequestException as e:
+        logging.debug(f"Failed auth check for module '{module}': {e}")
+        return None
+
+def get_name_by_id(vaultzid):
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/NameByID/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    r = requests.get(url, headers=get_headers())
+    r.raise_for_status()
+    return r.json()
+
+def get_identity(vaultzid):
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/identityHDStudent/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    r = requests.get(url, headers=get_headers())
+    r.raise_for_status()
+    return r.json()
+
+def format_identity(identity_json):
+    try:
+        item = identity_json["items"][0]
+        data = item["data"]
+        fields = item["properties"]["fields"]
+
+        lines = []
+        for field in fields:
+            key = field.get("id")
+            label = field.get("label", key)
+            value = data.get(key, "")
+            if value:
+                lines.append(f"{label}: {value}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Failed to format identity: {e}"
+
+def search_user(query):
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/Search/{query}"
     logging.debug(f"GET {url}")
     response = requests.get(url, headers=get_headers())
 
-    try:
-        response.raise_for_status()
-        logging.debug(f"Response status: {response.status_code}")
-        return response.json()
-    except requests.exceptions.JSONDecodeError:
-        print("Failed to decode JSON from server response.")
-        print("Response body:")
-        print(response.text[:500])
-        raise
-    except response.exceptions.HTTPError:
-        print(f"HTTP Error {response.status_code}: {response.reason}")
-        print("Response Body:")
-        print(response.text[:500])
-        raise
+    response.raise_for_status()
+    logging.debug(f"Response status: {response.status_code}")
+    # logging.debug(f"Response data: {response.json()}")
+    return response.json()

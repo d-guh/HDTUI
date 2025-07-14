@@ -1,5 +1,5 @@
 import argparse
-from hdtools import config, client, tui
+from hdtools import config, client, cli, tui
 
 # TODO: Update Client for full functionality
 # TODO: Clean up CLI stuff (Grab useful bit of output)
