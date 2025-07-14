@@ -1,32 +1,42 @@
 import argparse
 from hdtools import config, client, tui
 
-# TODO: Logging library for debug
-# TODO: Fix/Add more commands (identity, etc.; should output specific info if cmdline arg)
-# TODO: Format help output (section for commands etc)
-# TODO: Fix client
+# TODO: Update Client for full functionality
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
 
 def main():
     config.load_dotenv()
 
-    parser = argparse.ArgumentParser(description="HDTools CLI Wrapper")
-    parser.add_argument('-m', '--mode', choices=['cli', 'tui'], default='cli', help="Run Mode") # Default CLI for scripts, if using a command flag should exit upon gathering data, if no command flag used, open interactive mode in TUI or CLI
-    parser.add_argument('-s', '--search', help="Search user (CLI Only)")
-    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
-    args = parser.parse_args()
 
-    if args.debug:
-        config.DEBUG = True
-    if args.mode == 'tui':
+    parser = argparse.ArgumentParser(description="HDTools Wrapper", add_help=False)
+    parser.add_argument('-h', '--help', action='store_true', help="Show this help message and exit")
+    parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
+
+    subparser = parser.add_subparsers(dest='command', help='Available Commands')
+
+    # `search` command
+    search_parser = subparser.add_parser('search', help='Search for one or more users')
+    search_parser.add_argument('usernames', nargs='+', metavar='USERNAME', help='Username(s) to search')
+    
+    # `cli` command
+    cli_parser = subparser.add_parser('cli', help='Run interactive CLI interface')
+
+    # `tui` command
+    tui_parser = subparser.add_parser('tui', help='Run interactive TUI interface')
+
+    args = parser.parse_args()
+    config.init_logging(args.debug)
+
+    if args.command == 'cli':
+        cli.run()
+    elif args.command == 'tui':
         tui.run()
+    elif args.command == 'search':
+        for username in args.usernames:
+            print(client.search_user(username))
     else:
-        if args.search:
-            result = client.search_user(args.search)
-            print(result)
-        else:
-            parser.print_help()
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

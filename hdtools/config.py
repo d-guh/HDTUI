@@ -1,10 +1,5 @@
 import os
-
-DEBUG = False
-
-def debug(msg):
-    if DEBUG:
-        print(f"[DEBUG]: {msg}")
+import logging
 
 def load_dotenv(path=".env"):
     """Loads key=value pairs from .env, doesn't override content already present in environment variables"""
@@ -17,5 +12,12 @@ def load_dotenv(path=".env"):
                 continue
             if '=' in line:
                 key, val = line.split('=', 1)
-                if not os.environ.get(key):
+                if not os.environ.get(key) and val != '':
                     os.environ[key] = val.strip()
+
+def init_logging(debug=False):
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format='[%(levelname)s] %(message)s',
+        level=level
+    )
