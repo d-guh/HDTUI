@@ -1,9 +1,11 @@
 import argparse
 from hdtools import config, client, cli, tui
 
-# TODO: Update Client for full functionality
+# TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
+# TODO: Active User Command, Password Reset Command, Info/Note Command
+# TODO: Maybe remove auth check if slowing too much?
 
 def main():
     config.load_dotenv()

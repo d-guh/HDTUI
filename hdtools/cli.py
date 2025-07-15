@@ -3,14 +3,14 @@ import logging
 
 def prompt_identity_choice(items):
     """Display a list and prompt for choice"""
-    for i, item in enumerate(items):
+    for i, item in enumerate(items, start=1):
         name = item.get("preferredName", [""]) or [""]
         first = item.get("firstName", [""]) or [""]
         last = item.get("lastName", [""]) or [""]
         uname = item.get("primaryUserName", [""]) or [""]
 
         display_name = name[0] if name[0] else first[0]
-        print(f"{i + 1}. {display_name} {last[0]} ({uname[0] or '<no username>'})")
+        print(f"{i}. {display_name} {last[0]} ({uname[0] or '<no username>'})")
 
     while True:
         choice = input("Select [number]: ").strip()
@@ -21,6 +21,11 @@ def prompt_identity_choice(items):
         print("Invalid Selection.")
 
 def run():
+    if not client.test_cookie():
+        print("Failed to authenticate with HDTools. Is cookie set/valid?")
+        print("Exiting CLI...")
+        return
+    print("Cookie: OK")
     print("Welcome to the HDTools CLI Interface.")
     print("Type 'help' for commands. Type 'exit' to quit.")
 
@@ -76,7 +81,9 @@ def run():
 
                 modules = client.get_modules()["nav"]
                 print("\nAvailable Modules:")
-                for m in modules:
+                indexed_modules = []
+
+                for idx, m in enumerate(modules, start=1):
                     mod = m["module"]
                     label = m["label"]
                     authed = client.check_module_auth(mod, zid)
@@ -84,12 +91,38 @@ def run():
                         status = "SK"
                     else:
                         status = "OK" if authed else "NO"
-                    print(f"  {status} {label} ({mod})")
+                    print(f" {idx}. [{status}] {label} ({mod})")
+                    indexed_modules.append((mod, label, status))
 
-                identity_json = client.get_identity(zid)
-                print("\n=== Identity Info ===")
-                print(client.format_identity(identity_json))
-                print("-" * 40)
+                while True:
+                    print("\nType the number of the module you want to open (or press q to quit):")
+                    mod_choice = input("Module #: ").strip().lower()
+                    if mod_choice == "q":
+                        break
+                    if mod_choice == "":
+                        print("Skipping selection, defaulting to identity.")
+                        mod_choice = "1"
+                    if mod_choice.isdigit():
+                        idx = int(mod_choice) - 1
+                        if 0 <= idx < len(indexed_modules):
+                            if indexed_modules[idx][2] != "OK":
+                                print("Module is not available.")
+                                continue
+                            selected_mod, label, status = indexed_modules[idx]
+                            print(f"\nFetching module '{label}' ({selected_mod})...")
+                            if selected_mod == "eventLogNew":
+                                mod_json = client.get_vault_module(zid)
+                            else:
+                                mod_json = client.get_module(selected_mod, zid)
+                            print(f"\n=== {label} Module Info ===")
+
+                            if selected_mod == "eventLogNew":
+                                print(client.format_vault_history(mod_json))
+                            else:
+                                print(client.format_module(mod_json))
+                            print("-" * 40)
+                    else:
+                        print("Invalid selection. Please enter a valid number or press enter to skip.")
             else:
                 print(f"Unknown command: {command}")
 
