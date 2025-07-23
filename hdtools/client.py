@@ -52,7 +52,7 @@ def get_modules():
     r.raise_for_status()
     return r.json()
 
-def check_module_auth(module, vaultzid):
+def check_module_auth(module: str, vaultzid: str):
     url = f"{BASE_URL}/srv/feed/dynamic/checkAuth/{module}/Vaultzid={vaultzid},ou=Identities,o=cuvault"
     logging.debug(f"GET {url}")
     try:
@@ -66,21 +66,21 @@ def check_module_auth(module, vaultzid):
         logging.debug(f"Failed auth check for module '{module}': {e}")
         return None
 
-def get_name_by_id(vaultzid):
+def get_name_by_id(vaultzid: str):
     url = f"{BASE_URL}/srv/feed/dynamic/rest/NameByID/Vaultzid={vaultzid},ou=Identities,o=cuvault"
     logging.debug(f"GET {url}")
     r = requests.get(url, headers=get_headers())
     r.raise_for_status()
     return r.json()
 
-def get_module(module, vaultzid):
+def get_module(module: str, vaultzid: str):
     url = f"{BASE_URL}/srv/feed/dynamic/rest/{module}/Vaultzid={vaultzid},ou=Identities,o=cuvault"
     logging.debug(f"GET {url}")
     r = requests.get(url, headers=get_headers())
     r.raise_for_status()
     return r.json()
 
-def get_vault_module(vaultzid):
+def get_vault_module(vaultzid: str):
     url = f"{BASE_URL}/srv/feed/dynamic/rest/eventLogNew/Vaultzid={vaultzid},ou=Identities,o=cuvault?extended=1"
     logging.debug(f"GET {url}")
     r = requests.get(url, headers=get_headers())
@@ -129,7 +129,8 @@ def format_vault_history(data):
     except Exception as e:
         return f"Failed to format vault history: {e}"
 
-def search_user(query):
+def search_user(query: str) -> dict:
+    query = parse_username(query) # Even though not always usernames, will permit using @clemson.edu etc.
     url = f"{BASE_URL}/srv/feed/dynamic/rest/Search/{query}"
     logging.debug(f"GET {url}")
     response = requests.get(url, headers=get_headers())
@@ -138,3 +139,47 @@ def search_user(query):
     logging.debug(f"Response status: {response.status_code}")
     # logging.debug(f"Response data: {response.json()}")
     return response.json()
+
+def parse_username(username: str) -> str:
+    return username.strip().removesuffix('@clemson.edu').removesuffix('@g.clemson.edu')
+
+# Similar to search, but more script friendly
+def get_user_data(user: str) -> dict:
+    username = parse_username(user)
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/Search/{username}"
+    logging.debug(f"GET {url}")
+    response = requests.get(url, headers=get_headers())
+    data = response.json()
+    if isinstance(response, dict) and 'ErrorMessage' in data:
+        error = data['ErrorMessage']
+        raise Exception(f"Unable to get user {username}: {error}")
+    elif not isinstance(data, list):
+        raise Exception(f"Unable to get user {username}: unknown data returned")
+    elif len(data) == 0:
+        raise Exception(f"Unable to get user {username}: no users returned")
+    
+    return data[0]
+
+def extract_id_and_username(user_json: dict) -> tuple[str, str]:
+    vaultzid = user_json.get('zid', None)
+    if vaultzid is None:
+        raise Exception('Data does not contain Vaultzid!')
+
+    primary_username = user_json.get('primaryUserName', [])
+    if primary_username is None:
+        raise Exception('Data does not contain primary username!')
+
+    logging.debug(f"Extracted username {primary_username} and id {vaultzid}")
+    return vaultzid, primary_username
+
+def get_last_password_change(user: str):
+    logging.debug(f"Getting last password change for user: {user}")
+    data = get_user_data(user)
+    vaultzid, username = extract_id_and_username(data)
+
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/usernamesHDStudent/{vaultzid}"
+    response = requests.get(url, headers=get_headers())
+    data = response.json()
+    reset_time = data['items'][0]['data']['passwordChangedTime']
+
+    return reset_time
