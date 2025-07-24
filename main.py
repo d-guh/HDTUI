@@ -1,6 +1,8 @@
 import argparse
 from hdtools import config, client, cli, tui
 
+# TODO: Use request session instead of opening a bajillion requests
+# TODO: File and Json input/output
 # TODO: Cleanup lastpass command, make more robust, json output?
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
@@ -43,7 +45,7 @@ def main():
             print(client.search_user(username))
     elif args.command == 'lastpass':
         for username in args.usernames:
-            print(client.get_last_password_change(username))
+            print(f"{username}: {client.get_last_password_change(username)}")
     else:
         parser.print_help()
 

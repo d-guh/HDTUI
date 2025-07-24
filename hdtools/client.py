@@ -1,6 +1,7 @@
 import os
-import requests
 import logging
+
+import requests
 
 BASE_URL = "https://hdtools.app.clemson.edu"
 
@@ -170,16 +171,22 @@ def extract_id_and_username(user_json: dict) -> tuple[str, str]:
         raise Exception('Data does not contain primary username!')
 
     logging.debug(f"Extracted username {primary_username} and id {vaultzid}")
-    return vaultzid, primary_username
+    return vaultzid, primary_username[0]
 
 def get_last_password_change(user: str):
     logging.debug(f"Getting last password change for user: {user}")
     data = get_user_data(user)
     vaultzid, username = extract_id_and_username(data)
 
+    if username is None:
+        raise Exception(f"Username {username} not in data")
+
     url = f"{BASE_URL}/srv/feed/dynamic/rest/usernamesHDStudent/{vaultzid}"
     response = requests.get(url, headers=get_headers())
     data = response.json()
-    reset_time = data['items'][0]['data']['passwordChangedTime']
+
+    data = next((u for u in data['items'] if u['data']['label'].lower() == username.lower()), None)
+
+    reset_time = data['data']['passwordChangedTime']
 
     return reset_time
