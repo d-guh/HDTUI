@@ -35,7 +35,7 @@ def run():
             if not line:
                 continue
 
-            if line.lower() in ("exit", "quit"):
+            if line.lower() in ("exit", "quit", "q"):
                 print("Exiting CLI.")
                 break
 

@@ -18,6 +18,7 @@ output
 
 # files and directories named "temp"
 temp
+temp\.*
 *.tmp
 
 # Mac
