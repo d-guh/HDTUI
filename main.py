@@ -4,13 +4,59 @@ import shlex
 
 from hdtools import config, client, cli, tui
 
-# TODO: Add more commands: Active user, login, abroad, reset password, department
+# TODO: Add more commands: login, abroad, reset password, department
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
 # TODO: Maybe remove auth check if slowing too much? (CLI/TUI)
-# TODO: Kill elif chain and use dispatch table
 # TODO: Improve documentation, add type hinting for params and returns
+
+def handle_cli(args):
+    cli.run()
+
+def handle_tui(args):
+    tui.run()
+
+def handle_abroad(args):
+    pass
+
+def handle_active(args):
+    usernames = load_usernames(args)
+    results = {}
+    for user in usernames:
+        try:
+            results[user] = client.get_user_status(user)
+        except Exception as e:
+            results[user] = {"error": str(e)}
+    if args.filter != "all":
+        target = args.filter.lower()
+        results = {user: status for user, status in results.items()
+                    if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
+    handle_output(results, args, formatter=None)
+
+def handle_department(args):
+    pass
+
+def handle_lastpass(args):
+    usernames = load_usernames(args)
+    results = {}
+    for user in usernames:
+        try:
+            results[user] = client.get_last_password_change(user)
+        except Exception as e:
+            results[user] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
+
+def handle_login(args):
+    pass
+
+def handle_reset(args):
+    pass
+
+def handle_search(args):
+    usernames = load_usernames(args)
+    results = {user: client.search_user(user) for user in usernames}
+    handle_output(results, args, formatter=None)
 
 def load_usernames(args):
     """Loads usernames from input file and/or CLI, normalizes with parse_username"""
@@ -66,70 +112,53 @@ def main():
     # `tui` command
     tui_parser = command_subparser.add_parser('tui', help='Run interactive TUI interface')
 
-    # `search` command
-    search_parser = command_subparser.add_parser('search', help='Search for one or more users')
-    search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to search')
-
-    # `lastpass` command
-    search_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
-    search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+    # `abroad` command
+    abroad_parser = command_subparser.add_parser('abroad', help='Check if an account is currently studying abroad for one or more users')
+    abroad_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     # `active` command
     active_parser = command_subparser.add_parser('active', help='Check if an account is active for one or more users')
     active_parser.add_argument('-f', '--filter', choices=['all', 'active', 'inactive'], default='all', help='Filter output by user activity status')
     active_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
-    # `reset` command
-    reset_parser = command_subparser.add_parser('reset', help='Reset a password for one or more users')
-    reset_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to reset')
+    # `department` command
+    department_parser = command_subparser.add_parser('department', help='Check the department for one or more users')
+    department_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
-    # `abroad` command
-    abroad_parser = command_subparser.add_parser('abroad', help='Check if an account is currently studying abroad for one or more users')
-    abroad_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+    # `lastpass` command
+    search_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
+    search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     # `login` command
     login_parser = command_subparser.add_parser('login', help='Attempt to login to one or more users')
     login_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to attempt')
 
-    # `department` command
-    department_parser = command_subparser.add_parser('department', help='Check the department for one or more users')
-    department_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+    # `reset` command
+    reset_parser = command_subparser.add_parser('reset', help='Reset a password for one or more users')
+    reset_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to reset')
+
+    # `search` command
+    search_parser = command_subparser.add_parser('search', help='Search for one or more users')
+    search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to search')
 
     args = parser.parse_args()
     config.init_logging(args.debug)
-
     client.setup_session()
 
-    if args.command == 'cli':
-        cli.run()
-    elif args.command == 'tui':
-        tui.run()
-    elif args.command == 'search':
-        usernames = load_usernames(args)
-        results = {user: client.search_user(user) for user in usernames}
-        handle_output(results, args, formatter=None)
-    elif args.command == 'lastpass':
-        usernames = load_usernames(args)
-        results = {}
-        for user in usernames:
-            try:
-                results[user] = client.get_last_password_change(user)
-            except Exception as e:
-                results[user] = {"error": str(e)}
-        handle_output(results, args, formatter=None)
-    elif args.command == 'active':
-        usernames = load_usernames(args)
-        results = {}
-        for user in usernames:
-            try:
-                results[user] = client.get_user_status(user)
-            except Exception as e:
-                results[user] = {"error": str(e)}
-        if args.filter != "all":
-            target = args.filter.lower()
-            results = {user: status for user, status in results.items()
-                       if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
-        handle_output(results, args, formatter=None)
+    dispatch = {
+        'cli': handle_cli,
+        'tui': handle_tui,
+        'abroad': handle_abroad,
+        'active': handle_active,
+        'department': handle_department,
+        'lastpass': handle_lastpass,
+        'login': handle_login,
+        'reset': handle_reset,
+        'search': handle_search,
+    }
+
+    if args.command in dispatch:
+        dispatch[args.command](args)
     else:
         parser.print_help()
 
