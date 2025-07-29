@@ -4,11 +4,12 @@ import shlex
 
 from hdtools import config, client, cli, tui
 
+# TODO: Add more commands: Active user, login, abroad, reset password, department
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
-# TODO: Active User Command, Password Reset Command, Info/Note Command
 # TODO: Maybe remove auth check if slowing too much? (CLI/TUI)
+# TODO: Kill elif chain and use dispatch table
 # TODO: Improve documentation, add type hinting for params and returns
 
 def load_usernames(args):
@@ -57,21 +58,42 @@ def main():
     output_group.add_argument('-oJ', '--output_json', metavar='FILE', help='Write JSON output to a file')
     output_group.add_argument('-oA', '--output_all', metavar='FILE', help='Write all output types to files')
 
-    subparser = parser.add_subparsers(dest='command', help='Available Commands')
+    command_subparser = parser.add_subparsers(dest='command', help='Available Commands')
 
     # `cli` command
-    cli_parser = subparser.add_parser('cli', help='Run interactive CLI interface')
+    cli_parser = command_subparser.add_parser('cli', help='Run interactive CLI interface')
 
     # `tui` command
-    tui_parser = subparser.add_parser('tui', help='Run interactive TUI interface')
+    tui_parser = command_subparser.add_parser('tui', help='Run interactive TUI interface')
 
     # `search` command
-    search_parser = subparser.add_parser('search', help='Search for one or more users')
+    search_parser = command_subparser.add_parser('search', help='Search for one or more users')
     search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to search')
 
     # `lastpass` command
-    search_parser = subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
+    search_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
     search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+
+    # `active` command
+    active_parser = command_subparser.add_parser('active', help='Check if an account is active for one or more users')
+    active_parser.add_argument('-f', '--filter', choices=['all', 'active', 'inactive'], default='all', help='Filter output by user activity status')
+    active_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+
+    # `reset` command
+    reset_parser = command_subparser.add_parser('reset', help='Reset a password for one or more users')
+    reset_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to reset')
+
+    # `abroad` command
+    abroad_parser = command_subparser.add_parser('abroad', help='Check if an account is currently studying abroad for one or more users')
+    abroad_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+
+    # `login` command
+    login_parser = command_subparser.add_parser('login', help='Attempt to login to one or more users')
+    login_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to attempt')
+
+    # `department` command
+    department_parser = command_subparser.add_parser('department', help='Check the department for one or more users')
+    department_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     args = parser.parse_args()
     config.init_logging(args.debug)
@@ -94,6 +116,19 @@ def main():
                 results[user] = client.get_last_password_change(user)
             except Exception as e:
                 results[user] = {"error": str(e)}
+        handle_output(results, args, formatter=None)
+    elif args.command == 'active':
+        usernames = load_usernames(args)
+        results = {}
+        for user in usernames:
+            try:
+                results[user] = client.get_user_status(user)
+            except Exception as e:
+                results[user] = {"error": str(e)}
+        if args.filter != "all":
+            target = args.filter.lower()
+            results = {user: status for user, status in results.items()
+                       if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
         handle_output(results, args, formatter=None)
     else:
         parser.print_help()

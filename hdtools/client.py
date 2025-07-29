@@ -202,3 +202,9 @@ def get_last_password_change(user: str):
     reset_time = data['data']['passwordChangedTime']
 
     return reset_time
+
+def get_user_status(user: str):
+    """Gets the users current status (health-good = active)"""
+    user_health = search_user(user)[0].get("userNamesHealth", None)
+    status = user_health.get(user.lower(), None)
+    return (status == "health-good")
