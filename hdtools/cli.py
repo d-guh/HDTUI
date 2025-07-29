@@ -70,7 +70,7 @@ def run():
                     print(f"\nResults for {arg}:")
                     user = prompt_identity_choice(results)
 
-                zid = user['zid'].split(',')[0].split('=')[1]
+                zid = user['zid']
                 print(f"\nSelected identity for: {user.get('firstName', [''])[0]} {user.get('lastName', [''])[0]}")
 
                 fullname = client.get_name_by_id(zid)
@@ -124,7 +124,7 @@ def run():
                     else:
                         print("Invalid selection. Please enter a valid number or press enter to skip.")
             else:
-                print(f"Unknown command: {command}")
+                print(f"Unknown command: {line}")
 
         except (KeyboardInterrupt, EOFError):
             print("\nExiting CLI.")

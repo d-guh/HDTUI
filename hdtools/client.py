@@ -59,7 +59,7 @@ def get_modules():
 
 def check_module_auth(module: str, vaultzid: str):
     """Checks if the current user is authenticated for a specific module. NOTE: Will likley not change much"""
-    url = f"{BASE_URL}/srv/feed/dynamic/checkAuth/{module}/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    url = f"{BASE_URL}/srv/feed/dynamic/checkAuth/{module}/{vaultzid}"
     logging.debug(f"GET {url}")
     try:
         r = session.get(url)
@@ -74,7 +74,7 @@ def check_module_auth(module: str, vaultzid: str):
 
 def get_name_by_id(vaultzid: str):
     """Gets the full name (and username) by vautzid"""
-    url = f"{BASE_URL}/srv/feed/dynamic/rest/NameByID/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/NameByID/{vaultzid}"
     logging.debug(f"GET {url}")
     r = session.get(url)
     r.raise_for_status()
@@ -82,7 +82,7 @@ def get_name_by_id(vaultzid: str):
 
 def get_module(module: str, vaultzid: str):
     """Gets a specified module"""
-    url = f"{BASE_URL}/srv/feed/dynamic/rest/{module}/Vaultzid={vaultzid},ou=Identities,o=cuvault"
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/{module}/{vaultzid}"
     logging.debug(f"GET {url}")
     r = session.get(url)
     r.raise_for_status()
@@ -90,7 +90,7 @@ def get_module(module: str, vaultzid: str):
 
 def get_vault_module(vaultzid: str):
     """Gets the vault module specifically since it has a different response format"""
-    url = f"{BASE_URL}/srv/feed/dynamic/rest/eventLogNew/Vaultzid={vaultzid},ou=Identities,o=cuvault?extended=1"
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/eventLogNew/{vaultzid}?extended=1"
     logging.debug(f"GET {url}")
     r = session.get(url)
     r.raise_for_status()
@@ -208,3 +208,16 @@ def get_user_status(user: str):
     user_health = search_user(user)[0].get("userNamesHealth", None)
     status = user_health.get(user.lower(), None)
     return (status == "health-good")
+
+def get_abroad_status(user: str):
+    """Checks if the user is studying abroad (TSAP/SAP/CAP)"""
+    zid, username = extract_id_and_username(search_user(user)[0])
+    module = get_module('courses', zid)
+    courses = module.get('items', [])[0].get('data', {})
+
+    abroad_courses = {'TSAP', 'CAP', 'SAP'}
+
+    for course in courses.keys():
+        if isinstance(course, str) and any(tag in course.upper() for tag in abroad_courses):
+            return True
+    return False

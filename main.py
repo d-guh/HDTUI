@@ -18,7 +18,18 @@ def handle_tui(args):
     tui.run()
 
 def handle_abroad(args):
-    pass
+    usernames = load_usernames(args)
+    results = {}
+    for user in usernames:
+        try:
+            results[user] = client.get_abroad_status(user)
+        except Exception as e:
+            results[user] = {"error": str(e)}
+    if args.filter != "all":
+        target = args.filter.lower()
+        results = {user: status for user, status in results.items()
+                    if isinstance(status, bool) and ((status and target == "abroad") or (not status and target == "local"))}
+    handle_output(results, args, formatter=None)
 
 def handle_active(args):
     usernames = load_usernames(args)
@@ -114,6 +125,7 @@ def main():
 
     # `abroad` command
     abroad_parser = command_subparser.add_parser('abroad', help='Check if an account is currently studying abroad for one or more users')
+    abroad_parser.add_argument('-f', '--filter', choices=['all', 'abroad', 'local'], default='all', help='Filter output by user abroad status')
     abroad_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     # `active` command
