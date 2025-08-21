@@ -5,6 +5,9 @@ import shlex
 
 from hdtools import config, client, cli, tui
 
+# TODO: Consider hardcoding all the endpoints tbh
+# TODO: Add simple endpoint for getting user ID etc.
+# TODO: Handle people with multiple usernames better (check active?)
 # TODO: Add more commands: login, abroad, reset password, department
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
@@ -57,6 +60,23 @@ def handle_lastpass(args):
             results[user] = client.get_last_password_change(user)
         except Exception as e:
             results[user] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
+
+def handle_lockout(args):
+    usernames = load_usernames(args)
+    results = {}
+    for user in usernames:
+        try:
+            data = client.get_user_data(user)
+            vaultzid, username = client.extract_id_and_username(data)
+            module = client.get_module('usernamesHDStudent', vaultzid)
+            results[user] = (module.get('activeDirectoryLockout') == 'true')
+        except Exception as e:
+            results[user] = {"error": str(e)}
+    if args.filter != "all":
+        target = args.filter.lower()
+        results = {user: status for user, status in results.items()
+                    if isinstance(status, bool) and ((status and target == "locked") or (not status and target == "unlocked"))}
     handle_output(results, args, formatter=None)
 
 def handle_login(args):
@@ -142,6 +162,11 @@ def main():
     search_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
     search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
+    # `lockout` command
+    lockout_parser = command_subparser.add_parser('lockout', help='Check if accounts currently have AD lockouts')
+    lockout_parser.add_argument('-f', '--filter', choices=['all', 'locked', 'unlocked'], default='all', help='Filter output by user lockout status')
+    lockout_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+
     # `login` command
     login_parser = command_subparser.add_parser('login', help='Attempt to login to one or more users')
     login_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to attempt')
@@ -165,6 +190,7 @@ def main():
         'active': handle_active,
         'department': handle_department,
         'lastpass': handle_lastpass,
+        'lockout': handle_lockout,
         'login': handle_login,
         'reset': handle_reset,
         'search': handle_search,
