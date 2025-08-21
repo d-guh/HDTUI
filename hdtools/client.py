@@ -221,3 +221,11 @@ def get_abroad_status(user: str):
         if isinstance(course, str) and any(tag in course.upper() for tag in abroad_courses):
             return True
     return False
+
+def check_login(user: str, password: str):
+    """Attempts to login using provided credentials"""
+    session = requests.Session()
+    session.get("https://logincheck.app.clemson.edu")
+    r = session.post("https://idp.app.clemson.edu/idp/profile/SAML2/Redirect/SSO?execution=e1s1", data={"j_username" : user, "j_password" : password, "_eventId_proceed" : ''})
+
+    return "duosecurity.com" in r.url

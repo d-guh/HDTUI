@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import argparse
 import json
-import shlex
 
 from hdtools import config, client, cli, tui
 
@@ -23,42 +22,42 @@ def handle_tui(args):
     tui.run()
 
 def handle_abroad(args):
-    usernames = load_usernames(args)
+    credentials = load_credentials(args)
     results = {}
-    for user in usernames:
+    for username, password in credentials:
         try:
-            results[user] = client.get_abroad_status(user)
+            results[username] = client.get_abroad_status(username)
         except Exception as e:
-            results[user] = {"error": str(e)}
+            results[username] = {"error": str(e)}
     if args.filter != "all":
         target = args.filter.lower()
-        results = {user: status for user, status in results.items()
+        results = {username: status for username, status in results.items()
                     if isinstance(status, bool) and ((status and target == "abroad") or (not status and target == "local"))}
     handle_output(results, args, formatter=None)
 
 def handle_active(args):
-    usernames = load_usernames(args)
+    credentials = load_credentials(args)
     results = {}
-    for user in usernames:
+    for username, password in credentials:
         try:
-            user_status = client.get_user_status(user)
+            user_status = client.get_user_status(username)
             lockout_status = False
             if args.locked:
-                data = client.get_user_data(user)
+                data = client.get_user_data(username)
                 vaultzid, username = client.extract_id_and_username(data)
                 lockout_status = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data'].get('activeDirectoryLockout', '') # this is a mess, sorry, also sometimes its false, sometimes empty string bruh
                 if lockout_status == '':
                     lockout_status = False
-                results[user] = lockout_status
+                results[username] = lockout_status
             if not user_status or lockout_status:
-                results[user] = False
+                results[username] = False
             else:
-                results[user] = user_status
+                results[username] = user_status
         except Exception as e:
-            results[user] = {"error": str(e)}
+            results[username] = {"error": str(e)}
     if args.filter != "all":
         target = args.filter.lower()
-        results = {user: status for user, status in results.items()
+        results = {username: status for username, status in results.items()
                     if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
     handle_output(results, args, formatter=None)
 
@@ -66,57 +65,74 @@ def handle_department(args):
     pass
 
 def handle_lastpass(args):
-    usernames = load_usernames(args)
+    credentials = load_credentials(args)
     results = {}
-    for user in usernames:
+    for username, password in credentials:
         try:
-            results[user] = client.get_last_password_change(user)
+            results[username] = client.get_last_password_change(username)
         except Exception as e:
-            results[user] = {"error": str(e)}
+            results[username] = {"error": str(e)}
     handle_output(results, args, formatter=None)
 
 def handle_lockout(args):
-    usernames = load_usernames(args)
+    credentials = load_credentials(args)
     results = {}
-    for user in usernames:
+    for username, password in credentials:
         try:
-            data = client.get_user_data(user)
+            data = client.get_user_data(username)
             vaultzid, username = client.extract_id_and_username(data)
             lockout_status = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data'].get('activeDirectoryLockout', '') # this is a mess, sorry, also sometimes its false, sometimes empty string bruh
             if lockout_status == '':
                 lockout_status = False
-            results[user] = lockout_status
+            results[username] = lockout_status
         except Exception as e:
-            results[user] = {"error": str(e)}
+            results[username] = {"error": str(e)}
     if args.filter != "all":
         target = args.filter.lower()
-        results = {user: status for user, status in results.items()
+        results = {username: status for username, status in results.items()
                     if isinstance(status, bool) and ((status and target == "locked") or (not status and target == "unlocked"))}
     handle_output(results, args, formatter=None)
 
 def handle_login(args):
-    pass
+    # load usernames + credentials
+    credentials = load_credentials(args)
+    results = {}
+    for username, password in credentials:
+        try:
+            results[username] = client.check_login(username, password)
+        except Exception as e:
+            results[username] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
 
 def handle_reset(args):
     pass
 
 def handle_search(args):
-    usernames = load_usernames(args)
-    results = {user: client.search_user(user) for user in usernames}
+    credentials = load_credentials(args)
+    results = {username: client.search_user(username) for username, password in credentials}
     handle_output(results, args, formatter=None)
 
-def load_usernames(args):
-    """Loads usernames from input file and/or CLI, normalizes with parse_username"""
-    usernames = list(args.usernames) if args.usernames else []
+def extract_cred(x):
+    y = x.split('\t')
+    if len(y) == 1:
+        return (y[0], None)
+    elif len(y) == 2:
+        return (y[0], y[1])
+    else:
+        return ('', None)
+
+def load_credentials(args):
+    """Loads credentials from input file and/or CLI, normalizes with parse_username"""
+    credentials = list(map(lambda x: (x, None), args.usernames)) if args.usernames else [("", "")]
 
     if args.input:
         with open(args.input) as f:
             content = f.read()
             # Split on spaces, newlines, and respecting quotes
-            file_usernames = shlex.split(content)
-            usernames.extend(file_usernames)
+            file_credentials = list(map(extract_cred, content.split('\n')))
+            credentials.extend(file_credentials)
 
-    return [client.parse_username(user) for user in usernames if user.strip()]
+    return [(client.parse_username(username), password) for username, password in credentials if username.strip()]
 
 def handle_output(data, args, formatter=None):
     """Generic output handler for plain/JSON/all output modes."""
@@ -144,7 +160,7 @@ def main():
     parser = argparse.ArgumentParser(description="HDTools Wrapper", add_help=False)
     parser.add_argument('-h', '--help', action='store_true', help="Show this help message and exit")
     parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
-    parser.add_argument('-i', '--input', metavar='FILE', help='Input file (ex. list of usernames)')
+    parser.add_argument('-i', '--input', metavar='FILE', help='Input file (ex. list of credentials)')
 
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument('-o', '--output', metavar='FILE', help='Write plaintext output to a file')
