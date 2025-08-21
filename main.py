@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 import json
 import shlex
@@ -108,7 +109,7 @@ def main():
     parser = argparse.ArgumentParser(description="HDTools Wrapper", add_help=False)
     parser.add_argument('-h', '--help', action='store_true', help="Show this help message and exit")
     parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
-    parser.add_argument('-i', '--input', help='Input file (ex. list of usernames)')
+    parser.add_argument('-i', '--input', metavar='FILE', help='Input file (ex. list of usernames)')
 
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument('-o', '--output', metavar='FILE', help='Write plaintext output to a file')
