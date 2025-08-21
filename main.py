@@ -7,7 +7,8 @@ from hdtools import config, client, cli, tui
 
 # TODO: Consider hardcoding all the endpoints tbh
 # TODO: Add simple endpoint for getting user ID etc.
-# TODO: Handle people with multiple usernames better (check active?)
+# TODO: Handle people with multiple usernames better (check active/primary?)
+# TODO: Add generic parser for module data?
 # TODO: Add more commands: login, abroad, reset password, department
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
@@ -40,7 +41,19 @@ def handle_active(args):
     results = {}
     for user in usernames:
         try:
-            results[user] = client.get_user_status(user)
+            user_status = client.get_user_status(user)
+            lockout_status = False
+            if args.locked:
+                data = client.get_user_data(user)
+                vaultzid, username = client.extract_id_and_username(data)
+                lockout_status = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data'].get('activeDirectoryLockout', '') # this is a mess, sorry, also sometimes its false, sometimes empty string bruh
+                if lockout_status == '':
+                    lockout_status = False
+                results[user] = lockout_status
+            if not user_status or lockout_status:
+                results[user] = False
+            else:
+                results[user] = user_status
         except Exception as e:
             results[user] = {"error": str(e)}
     if args.filter != "all":
@@ -69,7 +82,10 @@ def handle_lockout(args):
         try:
             data = client.get_user_data(user)
             vaultzid, username = client.extract_id_and_username(data)
-            results[user] = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data']['activeDirectoryLockout'] # this is a mess, sorry
+            lockout_status = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data'].get('activeDirectoryLockout', '') # this is a mess, sorry, also sometimes its false, sometimes empty string bruh
+            if lockout_status == '':
+                lockout_status = False
+            results[user] = lockout_status
         except Exception as e:
             results[user] = {"error": str(e)}
     if args.filter != "all":
@@ -150,6 +166,7 @@ def main():
 
     # `active` command
     active_parser = command_subparser.add_parser('active', help='Check if an account is active for one or more users')
+    active_parser.add_argument('-l', '--locked', action='store_true', help='Treats users with AD lockouts as inactive')
     active_parser.add_argument('-f', '--filter', choices=['all', 'active', 'inactive'], default='all', help='Filter output by user activity status')
     active_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
