@@ -69,8 +69,7 @@ def handle_lockout(args):
         try:
             data = client.get_user_data(user)
             vaultzid, username = client.extract_id_and_username(data)
-            module = client.get_module('usernamesHDStudent', vaultzid)
-            results[user] = (module.get('activeDirectoryLockout') == 'true')
+            results[user] = client.get_module('usernamesHDStudent', vaultzid)['items'][0]['data']['activeDirectoryLockout'] # this is a mess, sorry
         except Exception as e:
             results[user] = {"error": str(e)}
     if args.filter != "all":
