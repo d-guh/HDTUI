@@ -112,6 +112,19 @@ def handle_search(args):
     results = {username: client.search_user(username) for username, password in credentials}
     handle_output(results, args, formatter=None)
 
+def handle_supervisor(args):
+    credentials = load_credentials(args)
+    results = {}
+    for username, password in credentials:
+        try:
+            data = client.get_user_data(username)
+            vaultzid, username = client.extract_id_and_username(data)
+            results[username] = [i['data'].get('supervisorName') for i in client.get_module('employeeRecords', vaultzid)['items'] if
+                                 i.get('data', {}).get('objectId') == 'employeeRecords' and i.get('data', {}).get('status') == 'A']
+        except Exception as e:
+            results[username] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
+
 def extract_cred(x):
     y = x.split('\t')
     if len(y) == 1:
@@ -191,8 +204,8 @@ def main():
     department_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     # `lastpass` command
-    search_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
-    search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+    lastpass_parser = command_subparser.add_parser('lastpass', help='Check the last password change time for one or more users')
+    lastpass_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
 
     # `lockout` command
     lockout_parser = command_subparser.add_parser('lockout', help='Check if accounts currently have AD lockouts')
@@ -211,6 +224,10 @@ def main():
     search_parser = command_subparser.add_parser('search', help='Search for one or more users')
     search_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to search')
 
+    # `supervisor` command
+    supervisor_parser = command_subparser.add_parser('supervisor', help='Get the supervisor(s) for one or more users')
+    supervisor_parser.add_argument('usernames', nargs='*', metavar='USERNAME', help='Username(s) to check')
+
     args = parser.parse_args()
     config.init_logging(args.debug)
     client.setup_session()
@@ -226,6 +243,7 @@ def main():
         'login': handle_login,
         'reset': handle_reset,
         'search': handle_search,
+        'supervisor': handle_supervisor
     }
 
     if args.command in dispatch:
