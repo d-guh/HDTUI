@@ -8,7 +8,7 @@ from hdtools import config, client, cli, tui
 # TODO: Add simple endpoint for getting user ID etc.
 # TODO: Handle people with multiple usernames better (check active/primary?)
 # TODO: Add generic parser for module data?
-# TODO: Add more commands: login, abroad, reset password, department
+# TODO: Custom formatters/output display, CSV, simple plaintext, XML?
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
