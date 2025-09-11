@@ -4,15 +4,15 @@ import json
 
 from hdtools import config, client, cli, tui
 
-# TODO: Consider hardcoding all the endpoints tbh
-# TODO: Add simple endpoint for getting user ID etc.
+# TODO: Make getModule have a list of default args to make it easier to find endpoints
+# TODO: Add simple endpoint for getting user ID from username search
 # TODO: Handle people with multiple usernames better (check active/primary?)
 # TODO: Add generic parser for module data?
 # TODO: Custom formatters/output display, CSV, simple plaintext, XML?
 # TODO: Add client update actions (button endpoints)
 # TODO: Clean up CLI stuff (Grab useful bit of output)
 # TODO: Clean up TUI stuff (Improve UX)
-# TODO: Maybe remove auth check if slowing too much? (CLI/TUI)
+# TODO: Maybe remove auth check if slowing too much (only returns available modules anyways) (CLI/TUI)
 # TODO: Improve documentation, add type hinting for params and returns
 
 def handle_cli(args):
@@ -123,7 +123,7 @@ def handle_supervisor(args):
                                  i.get('data', {}).get('objectId') == 'employeeRecords' and i.get('data', {}).get('status') == 'A']
         except Exception as e:
             results[username] = {"error": str(e)}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_supervisor)
 
 def extract_cred(x):
     y = x.split('\t')
@@ -153,8 +153,8 @@ def handle_output(data, args, formatter=None):
         with open(f"{args.output_all}.txt", "w") as f_txt, open(f"{args.output_all}.json", "w") as f_json:
             f_txt.write(formatter(data) if formatter else str(data))
             json.dump(data, f_json, indent=2)
-    elif args.output:
-        with open(args.output, "w") as f_txt:
+    elif args.output_normal:
+        with open(args.output_normal, "w") as f_txt:
             f_txt.write(formatter(data) if formatter else str(data))
     elif args.output_json:
         with open(args.output_json, "w") as f_json:
@@ -163,8 +163,15 @@ def handle_output(data, args, formatter=None):
         if formatter:
             print(formatter(data))
         else:
-            # print(json.dumps(data, indent=2) if isinstance(data, (dict, list)) else str(data))
             print(str(data))
+
+def format_supervisor(data: dict) -> str:
+    """Format supervisor data into plain text output."""
+    lines = []
+    for name, supervisors in data.items():
+        sup_str = ";".join(supervisors) if supervisors else "None"
+        lines.append(f"{name}:{sup_str}")
+    return "\n".join(lines)
 
 def main():
     """Entry point, handles command line arguments and flow"""
@@ -176,7 +183,7 @@ def main():
     parser.add_argument('-i', '--input', metavar='FILE', help='Input file (ex. list of credentials)')
 
     output_group = parser.add_mutually_exclusive_group()
-    output_group.add_argument('-o', '--output', metavar='FILE', help='Write plaintext output to a file')
+    output_group.add_argument('-oN', '--output_normal', metavar='FILE', help='Write plaintext output to a file')
     output_group.add_argument('-oJ', '--output_json', metavar='FILE', help='Write JSON output to a file')
     output_group.add_argument('-oA', '--output_all', metavar='FILE', help='Write all output types to files')
 
