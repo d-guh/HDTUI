@@ -17,18 +17,27 @@ def setup_session():
 
 def get_cookie():
     """Gets the cookie from the envrionment variable or .env file"""
-    if "HDTOOLS_COOKIE" in os.environ:
+    if "HDTOOLS_COOKIE" in os.environ and os.environ["HDTOOLS_COOKIE"]:
         cookie = os.environ["HDTOOLS_COOKIE"]
-        logging.debug(f"Using full cookie: {cookie}")
-        return cookie
-    elif "HDTOOLS_COOKIE_NAME" in os.environ and "HDTOOLS_COOKIE_VALUE" in os.environ:
-        name = os.environ["HDTOOLS_COOKIE_NAME"]
-        value = os.environ["HDTOOLS_COOKIE_VALUE"]
-        cookie = f"{name}={value}"
-        logging.debug(f"Using split cookie: {cookie}")
-        return cookie
+        logging.debug("Using full HDTools cookie: %s", cookie)
+    elif "HDTOOLS_COOKIE_NAME" in os.environ and os.environ["HDTOOLS_COOKIE_NAME"] and "HDTOOLS_COOKIE_VALUE" in os.environ and os.environ["HDTOOLS_COOKIE_VALUE"]:
+        hd_name = os.environ["HDTOOLS_COOKIE_NAME"]
+        hd_value = os.environ["HDTOOLS_COOKIE_VALUE"]
+        cookie = f"{hd_name}={hd_value}"
+        logging.debug("Using split HDTools cookie: %s", cookie)
     else:
         raise RuntimeError("Missing HDTools cookie in environment or .env")
+    if "BIG_IP_COOKIE" in os.environ and os.environ["BIG_IP_COOKIE"]:
+        cookie += f';{os.environ["BIG_IP_COOKIE"]}'
+        logging.debug("Using full HDTools cookie: %s", cookie)
+    elif "BIG_IP_COOKIE_NAME" in os.environ and os.environ["BIG_IP_COOKIE_NAME"] and "BIG_IP_COOKIE_VALUE" in os.environ and os.environ["BIG_IP_COOKIE_VALUE"]:
+        bg_name = os.environ["BIG_IP_COOKIE_NAME"]
+        bg_value = os.environ["BIG_IP_COOKIE_VALUE"]
+        cookie += f";{bg_name}={bg_value}"
+        logging.debug("Using split BIG_IP cookie: %s", cookie)
+    else:
+        raise RuntimeWarning("Missing BigIP cookie in environment or .env")
+    return cookie
 
 def test_cookie():
     """Validates the cookie by attempting to login to HDTools"""
