@@ -54,12 +54,15 @@ def handle_active(args):
             else:
                 results[username] = user_status
         except Exception as e:
-            results[username] = {"error": str(e)}
+            if str(e) == '0':
+                results[username] = "Not Found"
+            else:
+                results[username] = {"error": str(e)}
     if args.filter != "all":
         target = args.filter.lower()
         results = {username: status for username, status in results.items()
                     if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_active)
 
 def handle_department(args):
     pass
@@ -171,6 +174,13 @@ def format_supervisor(data: dict) -> str:
     for name, supervisors in data.items():
         sup_str = ";".join(supervisors) if supervisors else "None"
         lines.append(f"{name}:{sup_str}")
+    return "\n".join(lines)
+
+def format_active(data: dict) -> str:
+    """Format active user data into plain text output."""
+    lines = []
+    for username, status in data.items():
+        lines.append(f"{username}: {status}")
     return "\n".join(lines)
 
 def main():
