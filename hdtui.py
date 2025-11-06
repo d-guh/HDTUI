@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import json
+import logging
 
 from hdtools import config, client, cli, tui
 
@@ -42,6 +43,7 @@ def handle_active(args):
         try:
             user_status = client.get_user_status(username)
             lockout_status = False
+            logging.debug(f"STATUS: lockout_status: {username}: {lockout_status}")
             if args.locked:
                 data = client.get_user_data(username)
                 vaultzid, username = client.extract_id_and_username(data)

@@ -214,8 +214,11 @@ def get_last_password_change(user: str):
 
 def get_user_status(user: str):
     """Gets the users current status (health-good = active)"""
-    user_health = search_user(user)[0].get("userNamesHealth", None)
-    status = user_health.get(user.lower(), None)
+    user_health = search_user(user)[0].get("userNamesHealth", {}) or {}
+    user_health_lower = {k.lower(): v for k, v in user_health.items()}
+    logging.debug(f"STATUS: user_health: {user}: {user_health_lower}")
+    status = user_health_lower.get(user.lower(), None)
+    logging.debug(f"STATUS: user_status: {user}: {status}")
     return (status == "health-good")
 
 def get_abroad_status(user: str):
