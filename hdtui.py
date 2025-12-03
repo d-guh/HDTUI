@@ -67,7 +67,26 @@ def handle_active(args):
     handle_output(results, args, formatter=format_active)
 
 def handle_department(args):
-    pass
+    credentials = load_credentials(args)
+    results = {}
+    for username, password in credentials:
+        try:
+            data = client.get_user_data(username)
+            vaultzid, username = client.extract_id_and_username(data)
+
+            module = client.get_module('employeeRecords', vaultzid)
+            items = module.get('items', [])
+            results[username] = []
+
+            for item in items:
+                data = item.get('data', {})
+                if data.get('objectId') == 'employeeRecords' and data.get('status') == 'A':
+                    results[username].append(data.get('departmentName'))
+            #results[username] = [i['data'].get('departmentName') for i in items if i.get('data', {}).get('objectId') == 
+                       #         'employeeRecords' and i.get('data', {}).get('status') == 'A']
+        except Exception as e:
+            results[username] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
 
 def handle_lastpass(args):
     credentials = load_credentials(args)
@@ -124,8 +143,15 @@ def handle_supervisor(args):
         try:
             data = client.get_user_data(username)
             vaultzid, username = client.extract_id_and_username(data)
-            results[username] = [i['data'].get('supervisorName') for i in client.get_module('employeeRecords', vaultzid)['items'] if
-                                 i.get('data', {}).get('objectId') == 'employeeRecords' and i.get('data', {}).get('status') == 'A']
+
+            module = client.get_module('employeeRecords', vaultzid)
+            items = module.get('items', [])
+            results[username] = []
+
+            for item in items:
+                data = item.get('data', {})
+                if data.get('objectId') == 'employeeRecords' and data.get('status') == 'A':
+                    results[username].append(data.get('supervisorName'))      
         except Exception as e:
             results[username] = {"error": str(e)}
     handle_output(results, args, formatter=format_supervisor)
