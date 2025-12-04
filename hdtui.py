@@ -136,6 +136,7 @@ def handle_reset(args):
             data = client.get_user_data(username)
             vaultzid, username = client.extract_id_and_username(data)
             results[username] = client.reset_password(username, vaultzid)
+            client.set_user_description(username, vaultzid)
         except Exception as e:
             results[username] = {"error": str(e)}
     handle_output(results, args, formatter=None)

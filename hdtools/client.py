@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 
 import requests
 
@@ -248,6 +249,17 @@ def reset_password(username: str, vaultzid: str):
     url = f"{BASE_URL}/srv/feed/dynamic/rest/usernamesHDStudent/{vaultzid}/username%23{username}"
     payload = {
         "password":"password-api"
+    }
+    logging.debug(f"POST {url} with payload {payload}")
+    r = session.post(url, json=payload)
+    r.raise_for_status()
+    return r.json()
+
+def set_user_description(username: str, vaultzid: str):
+    """Sets the users description"""
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/usernamesHDStudent/{vaultzid}/username%23{username}"
+    payload = {
+        "description": [f"{datetime.now().strftime("%m/%d/%Y %H:%M")} - Password reset by CCIT Security"]
     }
     logging.debug(f"POST {url} with payload {payload}")
     r = session.post(url, json=payload)
