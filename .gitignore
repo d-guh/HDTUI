@@ -17,6 +17,7 @@ output
 .vscode
 
 # files and directories named "temp"
+.temp
 temp
 temp\.*
 *.tmp
