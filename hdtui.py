@@ -129,7 +129,16 @@ def handle_login(args):
     handle_output(results, args, formatter=None)
 
 def handle_reset(args):
-    pass
+    credentials = load_credentials(args)
+    results = {}
+    for username, password in credentials:
+        try:
+            data = client.get_user_data(username)
+            vaultzid, username = client.extract_id_and_username(data)
+            results[username] = client.reset_password(username, vaultzid)
+        except Exception as e:
+            results[username] = {"error": str(e)}
+    handle_output(results, args, formatter=None)
 
 def handle_search(args):
     credentials = load_credentials(args)

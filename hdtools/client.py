@@ -12,7 +12,8 @@ def setup_session():
     session.headers.update({
         'Cookie': get_cookie(),
         'User-Agent': "HDToolsClient/1.0",
-        'Accept': 'application/json'
+        'Content-Type': "application/json",
+        'Accept': 'application/json',
     })
 
 def get_cookie():
@@ -241,3 +242,14 @@ def check_login(user: str, password: str):
     r = session.post("https://idp.app.clemson.edu/idp/profile/SAML2/Redirect/SSO?execution=e1s1", data={"j_username" : user, "j_password" : password, "_eventId_proceed" : ''})
 
     return "duosecurity.com" in r.url
+
+def reset_password(username: str, vaultzid: str):
+    """Resets the user's/users' password(s)"""
+    url = f"{BASE_URL}/srv/feed/dynamic/rest/usernamesHDStudent/{vaultzid}/username%23{username}"
+    payload = {
+        "password":"password-api"
+    }
+    logging.debug(f"POST {url} with payload {payload}")
+    r = session.post(url, json=payload)
+    r.raise_for_status()
+    return r.json()
