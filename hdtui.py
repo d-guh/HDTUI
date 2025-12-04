@@ -86,7 +86,7 @@ def handle_department(args):
                        #         'employeeRecords' and i.get('data', {}).get('status') == 'A']
         except Exception as e:
             results[username] = {"error": str(e)}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_department)
 
 def handle_lastpass(args):
     credentials = load_credentials(args)
@@ -195,6 +195,14 @@ def handle_output(data, args, formatter=None):
             print(formatter(data))
         else:
             print(str(data))
+
+def format_department(data: dict) -> str:
+    """Format department data into plain text output."""
+    lines = []
+    for name, departments in data.items():
+        dept_str = ";".join(departments) if departments else "None"
+        lines.append(f"{name}:{dept_str}")
+    return "\n".join(lines)
 
 def format_supervisor(data: dict) -> str:
     """Format supervisor data into plain text output."""
