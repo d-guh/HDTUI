@@ -23,6 +23,9 @@ def handle_tui(args):
     tui.run()
 
 def handle_abroad(args):
+    """Used to determine if a user is currently studying/working abroad. Returns a dictionary of 
+    users with a boolean value indicating if they are abroad (True) or local (False). A filter
+    can be applied to only show abroad/local users."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -37,6 +40,9 @@ def handle_abroad(args):
     handle_output(results, args, formatter=None)
 
 def handle_active(args):
+    """Used to determine if a user is currently active. Returns a dictionary of 
+    users with a boolean value indicating if they are active (True) or inactive(False). A filter
+    can be applied to only show inactive/active users."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -67,6 +73,8 @@ def handle_active(args):
     handle_output(results, args, formatter=format_active)
 
 def handle_department(args):
+    """Used to get the department(s) for one or more users. Returns a dictionary of users
+    with a list of their associated department names."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -82,13 +90,13 @@ def handle_department(args):
                 data = item.get('data', {})
                 if data.get('objectId') == 'employeeRecords' and data.get('status') == 'A':
                     results[username].append(data.get('departmentName'))
-            #results[username] = [i['data'].get('departmentName') for i in items if i.get('data', {}).get('objectId') == 
-                       #         'employeeRecords' and i.get('data', {}).get('status') == 'A']
         except Exception as e:
             results[username] = {"error": str(e)}
     handle_output(results, args, formatter=format_department)
 
 def handle_lastpass(args):
+    """Used to get the last password change time for one or more users. Returns a dictionary of users
+    with their last password change timestamp."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -99,6 +107,9 @@ def handle_lastpass(args):
     handle_output(results, args, formatter=None)
 
 def handle_lockout(args):
+    """Used to determine if a user currently has an AD lockout. Returns a dictionary of
+    users with a boolean value indicating if they are locked out (True) or not (False). A filter
+    can be applied to only show locked/unlocked users."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -118,7 +129,8 @@ def handle_lockout(args):
     handle_output(results, args, formatter=None)
 
 def handle_login(args):
-    # load usernames + credentials
+    """Attempts to login to one or more users. Returns a dictionary of users
+    with the result of the login attempt."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -129,6 +141,8 @@ def handle_login(args):
     handle_output(results, args, formatter=None)
 
 def handle_reset(args):
+    """Resets the password for one or more users. Returns a dictionary of users
+    with the result of the password reset attempt."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -142,11 +156,15 @@ def handle_reset(args):
     handle_output(results, args, formatter=None)
 
 def handle_search(args):
+    """Searches for one or more users. Returns a dictionary of users
+    with the result of the search."""
     credentials = load_credentials(args)
     results = {username: client.search_user(username) for username, password in credentials}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_search)
 
 def handle_supervisor(args):
+    """Used to get the supervisor(s) for one or more users. Returns a dictionary of users
+    with a list of their associated supervisor names."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -227,6 +245,19 @@ def format_active(data: dict) -> str:
     lines = []
     for username, status in data.items():
         lines.append(f"{username}: {status}")
+    return "\n".join(lines)
+
+def format_search(data: dict) -> str:
+    """Format search data into plain text output."""
+    lines = []
+    for username, results in data.items():
+        for result in results:
+            entry = [username]
+            for key in ['firstName', 'lastName', 'affiliations', 'userNames', 'XID', 
+                        'CUID', 'employeeId']:
+                if key in result:
+                    entry.append(f"{key}: {result[key]}")
+        lines.append(" | ".join(entry)) 
     return "\n".join(lines)
 
 def main():
