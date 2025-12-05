@@ -21,11 +21,6 @@ def prompt_identity_choice(items):
         print("Invalid Selection.")
 
 def run():
-    if not client.test_cookie():
-        print("Failed to authenticate with HDTools. Is cookie set/valid?")
-        print("Exiting CLI...")
-        return
-    print("Cookie: OK")
     print("Welcome to the HDTools CLI Interface.")
     print("Type 'help' for commands. Type 'exit' to quit.")
 

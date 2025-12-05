@@ -6,14 +6,10 @@ import logging
 from hdtools import config, client, cli, tui
 
 # TODO: Make getModule have a list of default args to make it easier to find endpoints
-# TODO: Add simple endpoint for getting user ID from username search
 # TODO: Handle people with multiple usernames better (check active/primary?)
-# TODO: Add generic parser for module data?
 # TODO: Custom formatters/output display, CSV, simple plaintext, XML?
 # TODO: Add client update actions (button endpoints)
-# TODO: Clean up CLI stuff (Grab useful bit of output)
-# TODO: Clean up TUI stuff (Improve UX)
-# TODO: Maybe remove auth check if slowing too much (only returns available modules anyways) (CLI/TUI)
+# TODO: TUI Overhaul
 # TODO: Improve documentation, add type hinting for params and returns
 
 def handle_cli(args):
@@ -226,31 +222,35 @@ def handle_output(data, args, formatter=None):
         else:
             print(str(data))
 
+def format_abroad(data: dict) -> str:
+    pass
+
+def format_active(data: dict) -> str:
+    lines = []
+    for username, status in data.items():
+        lines.append(f"{username}: {status}")
+    return "\n".join(lines)
+
 def format_department(data: dict) -> str:
-    """Format department data into plain text output."""
     lines = []
     for name, departments in data.items():
         dept_str = ";".join(departments) if departments else "None"
         lines.append(f"{name}:{dept_str}")
     return "\n".join(lines)
 
-def format_supervisor(data: dict) -> str:
-    """Format supervisor data into plain text output."""
-    lines = []
-    for name, supervisors in data.items():
-        sup_str = ";".join(supervisors) if supervisors else "None"
-        lines.append(f"{name}:{sup_str}")
-    return "\n".join(lines)
+def format_lastpass(data: dict) -> str:
+    pass
 
-def format_active(data: dict) -> str:
-    """Format active user data into plain text output."""
-    lines = []
-    for username, status in data.items():
-        lines.append(f"{username}: {status}")
-    return "\n".join(lines)
+def format_lockout(data: dict) -> str:
+    pass
+
+def format_login(data: dict) -> str:
+    pass
+
+def format_reset(data: dict) -> str:
+    pass
 
 def format_search(data: dict) -> str:
-    """Format search data into plain text output."""
     lines = []
     for username, results in data.items():
         for result in results:
@@ -262,8 +262,15 @@ def format_search(data: dict) -> str:
         lines.append(" | ".join(entry)) 
     return "\n".join(lines)
 
+def format_supervisor(data: dict) -> str:
+    lines = []
+    for name, supervisors in data.items():
+        sup_str = ";".join(supervisors) if supervisors else "None"
+        lines.append(f"{name}:{sup_str}")
+    return "\n".join(lines)
+
 def main():
-    """Entry point, handles command line arguments and flow"""
+    """Entry point, sets up args and dispatch table."""
     config.load_dotenv()
 
     parser = argparse.ArgumentParser(description="HDTools Wrapper", add_help=False)
@@ -327,6 +334,11 @@ def main():
     args = parser.parse_args()
     config.init_logging(args.debug)
     client.setup_session()
+    # Test cookie twice in same session to verify Authenticated w/ load balancer
+    if not (client.test_cookie() and client.test_cookie()):
+        logging.error("Failed to authenticate with HDTools. Is cookie set/valid?")
+        exit(1)
+    print("Cookie: OK")
 
     dispatch = {
         'cli': handle_cli,
