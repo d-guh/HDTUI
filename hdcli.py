@@ -3,7 +3,7 @@ import argparse
 import json
 import logging
 
-from hdtools import config, client, cli, tui
+from hdtools import config, client, cli
 
 # TODO: Make getModule have a list of default args to make it easier to find endpoints
 # TODO: Handle people with multiple usernames better (check active/primary?)
@@ -12,9 +12,6 @@ from hdtools import config, client, cli, tui
 
 def handle_cli(args):
     cli.run()
-
-def handle_tui(args):
-    tui.run()
 
 def handle_abroad(args):
     """Used to determine if a user is currently studying/working abroad. Returns a dictionary of 
@@ -272,7 +269,7 @@ def format_search(data: dict) -> str:
             entry = [username]
             for key in ['firstName', 'lastName', 'affiliations', 'userNames', 'XID', 
                         'CUID', 'employeeId']:
-                if key in result:
+                if key in result and result[key]:
                     entry.append(f"{key}: {", ".join(result[key])}")
         lines.append(" | ".join(entry)) 
     return "\n".join(lines)
@@ -302,9 +299,6 @@ def main():
 
     # `cli` command
     cli_parser = command_subparser.add_parser('cli', help='Run interactive CLI interface')
-
-    # `tui` command
-    tui_parser = command_subparser.add_parser('tui', help='Run interactive TUI interface')
 
     # `abroad` command
     abroad_parser = command_subparser.add_parser('abroad', help='Check if an account is currently studying abroad for one or more users')
@@ -357,7 +351,6 @@ def main():
 
     dispatch = {
         'cli': handle_cli,
-        'tui': handle_tui,
         'abroad': handle_abroad,
         'active': handle_active,
         'department': handle_department,
