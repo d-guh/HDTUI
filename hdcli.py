@@ -142,7 +142,7 @@ def handle_login(args):
     results = {}
     for username, password in credentials:
         try:
-            results[username] = client.check_login(username, password)
+            results[username] = "Succeeded" if client.check_login(username, password) else "Failed"
         except Exception as e:
             results[username] = {"error": str(e)}
     handle_output(results, args, formatter=format_generic)
@@ -221,21 +221,31 @@ def load_credentials(args):
 
 def handle_output(data, args, formatter=None):
     """Generic output handler for plain/JSON/all output modes."""
-    if args.output_all:
-        with open(f"{args.output_all}.txt", "w") as f_txt, open(f"{args.output_all}.json", "w") as f_json:
-            f_txt.write(formatter(data) if formatter else str(data))
-            json.dump(data, f_json, indent=2)
-    elif args.output_normal:
-        with open(args.output_normal, "w") as f_txt:
-            f_txt.write(formatter(data) if formatter else str(data))
-    elif args.output_json:
-        with open(args.output_json, "w") as f_json:
-            json.dump(data, f_json, indent=2)
-    else:
-        if formatter:
-            print(formatter(data))
-        else:
+    output_flag_set = any([args.output_normal, args.output_json, args.output_all])
+    print_flag_set = any([args.print_normal, args.print_json])
+
+    if output_flag_set:
+        if args.output_all:
+            with open(f"{args.output_all}.txt", "w") as f_txt, open(f"{args.output_all}.json", "w") as f_json:
+                f_txt.write(formatter(data) if formatter else str(data))
+                json.dump(data, f_json, indent=2)
+        elif args.output_normal:
+            with open(args.output_normal, "w") as f_txt:
+                f_txt.write(formatter(data) if formatter else str(data))
+        elif args.output_json:
+            with open(args.output_json, "w") as f_json:
+                json.dump(data, f_json, indent=2)
+
+    if not output_flag_set or print_flag_set:
+        if args.print_normal:
+            print(formatter(data) if formatter else str(data))
+        elif args.print_json:
+            print(json.dumps(data, indent=2))
+        elif args.print_raw:
             print(str(data))
+        else:
+            print(formatter(data) if formatter else str(data))
+
 
 def format_generic(data: dict) -> str:
     """Formatter for generic output"""
@@ -247,7 +257,7 @@ def format_generic(data: dict) -> str:
 def format_department(data: dict) -> str:
     lines = []
     for name, departments in data.items():
-        dept_str = ";".join(departments) if departments else "None"
+        dept_str = ";".join(departments) if departments else "None" # TODO: Move this "None" into handler
         lines.append(f"{name}:{dept_str}")
     return "\n".join(lines)
 
@@ -277,7 +287,7 @@ def format_search(data: dict) -> str:
 def format_supervisor(data: dict) -> str:
     lines = []
     for name, supervisors in data.items():
-        sup_str = ";".join(supervisors) if supervisors else "None"
+        sup_str = ";".join(supervisors) if supervisors else "None" # TODO: Move this "None" into handler
         lines.append(f"{name}:{sup_str}")
     return "\n".join(lines)
 
@@ -289,6 +299,11 @@ def main():
     parser.add_argument('-h', '--help', action='store_true', help="Show this help message and exit")
     parser.add_argument('-d', '--debug', action='store_true', help="Enable debug output")
     parser.add_argument('-i', '--input', metavar='FILE', help='Input file (ex. list of credentials)')
+
+    print_group = parser.add_mutually_exclusive_group()
+    print_group.add_argument('-pN', '--print_normal', action='store_true', help='Prints plaintext to the commandline (default)')
+    print_group.add_argument('-pJ', '--print_json', action='store_true', help='Prints JSON to the commandline')
+    print_group.add_argument('-pR', '--print_raw', action='store_true', help='Prints RAW data to the commandline')
 
     output_group = parser.add_mutually_exclusive_group()
     output_group.add_argument('-oN', '--output_normal', metavar='FILE', help='Write plaintext output to a file')
@@ -347,7 +362,7 @@ def main():
     if not (client.test_cookie() and client.test_cookie()):
         logging.error("Failed to authenticate with HDTools. Is cookie set/valid?")
         exit(1)
-    print("Cookie: OK\n===")
+    print("Cookie: OK\n==========")
 
     dispatch = {
         'cli': handle_cli,
