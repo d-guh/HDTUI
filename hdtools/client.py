@@ -264,4 +264,4 @@ def set_user_description(username: str, vaultzid: str):
     logging.debug(f"POST {url} with payload {payload}")
     r = session.post(url, json=payload)
     r.raise_for_status()
-    return r.json()
+    return payload
