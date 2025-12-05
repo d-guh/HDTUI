@@ -258,7 +258,7 @@ def format_search(data: dict) -> str:
             for key in ['firstName', 'lastName', 'affiliations', 'userNames', 'XID', 
                         'CUID', 'employeeId']:
                 if key in result:
-                    entry.append(f"{key}: {result[key]}")
+                    entry.append(f"{key}: {", ".join(result[key])}")
         lines.append(" | ".join(entry)) 
     return "\n".join(lines)
 
