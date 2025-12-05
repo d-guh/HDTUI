@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import sys
 import json
 import logging
 
@@ -376,7 +377,7 @@ def main():
         # Test cookie twice in same session to verify Authenticated w/ load balancer
         if not (client.test_cookie() and client.test_cookie()):
             logging.error("Failed to authenticate with HDTools. Is cookie set/valid?")
-            exit(1)
+            sys.exit(1)
         print("Cookie: OK\n==========")
         dispatch[args.command](args)
     else:
