@@ -61,7 +61,22 @@ def test_cookie():
         return False
 
 def get_modules():
-    """Gets the available modules using the getModules.php endpoint"""
+    """
+    Gets the available modules using the getModules.php endpoint
+    COMMON MODULES:
+    Display Name -> moduleName
+    Identity -> identityHDStudent
+    Usernames -> usernamesHDStudent
+    Student Records -> studentRecords
+    Employee Records -> employeeRecords
+    Groups -> centralEnrollments
+    Courses -> courses
+    Owned Identities -> associatedIdentities
+    Duo -> duo
+    Netreg -> netreg
+    Vault History -> eventLogNew
+    Log -> log
+    """
     url = f"{BASE_URL}/srv/util/getModules.php"
     logging.debug(f"GET {url}")
     r = session.get(url)

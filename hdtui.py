@@ -7,9 +7,7 @@ from hdtools import config, client, cli, tui
 
 # TODO: Make getModule have a list of default args to make it easier to find endpoints
 # TODO: Handle people with multiple usernames better (check active/primary?)
-# TODO: Custom formatters/output display, CSV, simple plaintext, XML?
-# TODO: Add client update actions (button endpoints)
-# TODO: TUI Overhaul
+# TODO: Validate username case is being IGNORED (lowercase preferred, any compairson needs this, output may want to be sanitized aswell)
 # TODO: Improve documentation, add type hinting for params and returns
 
 def handle_cli(args):
@@ -24,16 +22,23 @@ def handle_abroad(args):
     can be applied to only show abroad/local users."""
     credentials = load_credentials(args)
     results = {}
+    
     for username, password in credentials:
         try:
             results[username] = client.get_abroad_status(username)
         except Exception as e:
             results[username] = {"error": str(e)}
+    
+    results = {username: 'Abroad' if status else 'Local' for username, status in results.items() if isinstance(status, bool)}
+
     if args.filter != "all":
         target = args.filter.lower()
-        results = {username: status for username, status in results.items()
-                    if isinstance(status, bool) and ((status and target == "abroad") or (not status and target == "local"))}
-    handle_output(results, args, formatter=None)
+        results = {username: value for username, value in results.items()
+                   if (value == 'Abroad' and target == 'abroad') or 
+                      (value == 'Local' and target == 'local')}
+    
+    handle_output(results, args, formatter=format_generic)
+
 
 def handle_active(args):
     """Used to determine if a user is currently active. Returns a dictionary of 
@@ -62,11 +67,15 @@ def handle_active(args):
                 results[username] = "Not Found"
             else:
                 results[username] = {"error": str(e)}
+
+    results = {username: 'Active' if status else 'Inactive' for username, status in results.items() if isinstance(status, bool)}
+
     if args.filter != "all":
         target = args.filter.lower()
-        results = {username: status for username, status in results.items()
-                    if isinstance(status, bool) and ((status and target == "active") or (not status and target == "inactive"))}
-    handle_output(results, args, formatter=format_active)
+        results = {username: value for username, value in results.items()
+                   if (value == 'Active' and target == 'active') or 
+                      (value == 'Inactive' and target == 'inactive')}
+    handle_output(results, args, formatter=format_generic)
 
 def handle_department(args):
     """Used to get the department(s) for one or more users. Returns a dictionary of users
@@ -100,7 +109,7 @@ def handle_lastpass(args):
             results[username] = client.get_last_password_change(username)
         except Exception as e:
             results[username] = {"error": str(e)}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_generic)
 
 def handle_lockout(args):
     """Used to determine if a user currently has an AD lockout. Returns a dictionary of
@@ -118,15 +127,20 @@ def handle_lockout(args):
             results[username] = lockout_status
         except Exception as e:
             results[username] = {"error": str(e)}
+
+    results = {username: 'Locked' if status else 'Unlocked' for username, status in results.items() if isinstance(status, bool)}
+
     if args.filter != "all":
         target = args.filter.lower()
-        results = {username: status for username, status in results.items()
-                    if isinstance(status, bool) and ((status and target == "locked") or (not status and target == "unlocked"))}
-    handle_output(results, args, formatter=None)
+        results = {username: value for username, value in results.items()
+                   if (value == 'Locked' and target == 'locked') or 
+                      (value == 'Unlocked' and target == 'unlocked')}
+    handle_output(results, args, formatter=format_generic)
 
 def handle_login(args):
     """Attempts to login to one or more users. Returns a dictionary of users
-    with the result of the login attempt."""
+    with the result of the login attempt.
+    Currently requires the use of an input file, as you cannot provide passwords on the command line by design."""
     credentials = load_credentials(args)
     results = {}
     for username, password in credentials:
@@ -134,7 +148,7 @@ def handle_login(args):
             results[username] = client.check_login(username, password)
         except Exception as e:
             results[username] = {"error": str(e)}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_generic)
 
 def handle_reset(args):
     """Resets the password for one or more users. Returns a dictionary of users
@@ -145,13 +159,17 @@ def handle_reset(args):
         try:
             data = client.get_user_data(username)
             vaultzid, username = client.extract_id_and_username(data)
+            reset_result = client.reset_password(username, vaultzid)
+            description_result = client.set_user_description(username, vaultzid)
             results[username] = {
-                "SuccessMessage": client.reset_password(username, vaultzid).get("SuccessMessage"),
-                "description": client.set_user_description(username, vaultzid).get("description")
+                "SuccessMessage": reset_result.get("SuccessMessage"),
+                "description": description_result.get("description")
             }
+            if not results[username]["SuccessMessage"]:
+                results[username]["error"] = "Password reset failed. No SuccessMessage returned."
         except Exception as e:
             results[username] = {"error": str(e)}
-    handle_output(results, args, formatter=None)
+    handle_output(results, args, formatter=format_reset)
 
 def handle_search(args):
     """Searches for one or more users. Returns a dictionary of users
@@ -222,10 +240,8 @@ def handle_output(data, args, formatter=None):
         else:
             print(str(data))
 
-def format_abroad(data: dict) -> str:
-    pass
-
-def format_active(data: dict) -> str:
+def format_generic(data: dict) -> str:
+    """Formatter for generic output"""
     lines = []
     for username, status in data.items():
         lines.append(f"{username}: {status}")
@@ -238,17 +254,16 @@ def format_department(data: dict) -> str:
         lines.append(f"{name}:{dept_str}")
     return "\n".join(lines)
 
-def format_lastpass(data: dict) -> str:
-    pass
-
-def format_lockout(data: dict) -> str:
-    pass
-
-def format_login(data: dict) -> str:
-    pass
-
 def format_reset(data: dict) -> str:
-    pass
+    lines = []
+    for username, results in data.items():
+        if "SuccessMessage" in results:
+            # Better hope they never change the message lol
+            reset_value = results["SuccessMessage"].split("<br><br><b>")[-1].split("</b>")[0]
+            lines.append(f"{username}: Password reset to '{reset_value}'")
+        else:
+            lines.append(f"{username}: {results.get('error', 'Unknown error occurred')}")
+    return "\n".join(lines)
 
 def format_search(data: dict) -> str:
     lines = []
@@ -338,7 +353,7 @@ def main():
     if not (client.test_cookie() and client.test_cookie()):
         logging.error("Failed to authenticate with HDTools. Is cookie set/valid?")
         exit(1)
-    print("Cookie: OK")
+    print("Cookie: OK\n===")
 
     dispatch = {
         'cli': handle_cli,
